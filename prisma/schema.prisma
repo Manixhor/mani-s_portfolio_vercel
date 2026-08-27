@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model PortfolioConfig {
+  id                 Int      @id @default(1)
+  hero               String   @default("{}")
+  about              String   @default("{}")
+  experience         String   @default("{}")
+  skills             String   @default("{}")
+  certifications     String   @default("{}")
+  projects           String   @default("{}")
+  contact            String   @default("{}")
+  notificationEmails String   @default("")
+  footer             String   @default("{}")
+  updatedAt          DateTime @updatedAt
+
+  @@map("portfolio_config")
+}
+
+model ExperienceItem {
+  id        Int     @id @default(autoincrement())
+  role      String
+  company   String
+  period    String  @default("")
+  points    String  @default("")
+  order     Int     @default(0)
+  isVisible Boolean @default(true)
+
+  @@index([order, id])
+  @@map("experience_items")
+}
+
+model SkillItem {
+  id        Int     @id @default(autoincrement())
+  name      String
+  icon      String  @default("")
+  order     Int     @default(0)
+  isVisible Boolean @default(true)
+
+  @@index([order, name])
+  @@map("skill_items")
+}
+
+model CertificationItem {
+  id            Int     @id @default(autoincrement())
+  title         String
+  issuer        String  @default("")
+  issuedDate    String  @default("")
+  credentialUrl String  @default("")
+  description   String  @default("")
+  imageUrl      String  @default("")
+  imageAlt      String  @default("")
+  order         Int     @default(0)
+  isVisible     Boolean @default(true)
+
+  @@index([order, id])
+  @@map("certification_items")
+}
+
+model ProjectItem {
+  id            Int     @id @default(autoincrement())
+  name          String
+  description   String  @default("")
+  brief         String  @default("")
+  stack         String  @default("")
+  liveUrl       String  @default("")
+  showLiveUrl   Boolean @default(true)
+  githubUrl     String  @default("")
+  showGithubUrl Boolean @default(true)
+  imageUrl      String  @default("")
+  imageAlt      String  @default("")
+  order         Int     @default(0)
+  isVisible     Boolean @default(true)
+
+  @@index([order, id])
+  @@map("project_items")
+}
+
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  subject   String
+  message   String
+  createdAt DateTime @default(now())
+  isRead    Boolean  @default(false)
+
+  @@index([createdAt])
+  @@map("contact_messages")
+}
+
+model PageView {
+  id        Int      @id @default(autoincrement())
+  path      String
+  ipAddress String?  @map("ip_address")
+  userAgent String   @default("") @map("user_agent")
+  referrer  String   @default("")
+  timestamp DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([path])
+  @@map("page_views")
+}
