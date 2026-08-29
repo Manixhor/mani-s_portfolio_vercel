@@ -68,7 +68,7 @@ export default function GithubCalendar() {
   const longest = useCounter(data?.stats?.longestStreak ?? 0, 800);
   const best = useCounter(data?.stats?.bestDay?.count ?? 0, 800);
 
-  /* Scroll reveal */
+  /* Scroll reveal — re-runs after data loads so ref is populated */
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -78,7 +78,7 @@ export default function GithubCalendar() {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [loading]);
 
   const load = useCallback(async () => {
     setLoading(true);
