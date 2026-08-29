@@ -99,9 +99,10 @@ export default function GithubCalendar() {
   /* ── Build grid ── */
   const buildGrid = () => {
     if (!data || data.days.length === 0) return null;
-    const { days } = data;
+    // Sort chronologically — API returns days column-by-column (all Sundays, then Mondays...)
+    const days = [...data.days].sort((a, b) => a.date.localeCompare(b.date));
 
-    // Determine first day of week for first date
+    // Determine first day of week for the first date
     const first = new Date(`${days[0].date}T00:00:00`);
     const startOffset = first.getDay(); // 0=Sun
 
