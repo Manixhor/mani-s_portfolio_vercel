@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+/* ── Types ── */
 interface ContributionDay {
   date: string;
   level: number;
@@ -24,253 +25,266 @@ const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
+function fmtNice(ds: string) {
+  const d = new Date(`${ds}T00:00:00`);
+  return `${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
 
-function formatDateShort(dateStr: string) {
-  const d = new Date(`${dateStr}T00:00:00`);
+function fmtShort(ds: string) {
+  const d = new Date(`${ds}T00:00:00`);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function formatDateNice(dateStr: string) {
-  const d = new Date(`${dateStr}T00:00:00`);
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
-}
-
-/* Animated counter hook */
-function useAnimatedCounter(target: number, duration = 1200) {
-  const [value, setValue] = useState(0);
-  const ref = useRef<number | null>(null);
-
+/* ── Animated counter ── */
+function useCounter(target: number, dur = 1200) {
+  const [v, setV] = useState(0);
+  const raf = useRef<number | null>(null);
   useEffect(() => {
-    if (target === 0) return;
-    const start = performance.now();
-    const animate = (now: number) => {
-      const elapsed = now - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.round(eased * target));
-      if (progress < 1) {
-        ref.current = requestAnimationFrame(animate);
-      }
+    if (!target) return;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min((now - t0) / dur, 1);
+      setV(Math.round((1 - Math.pow(1 - p, 3)) * target));
+      if (p < 1) raf.current = requestAnimationFrame(tick);
     };
-    ref.current = requestAnimationFrame(animate);
-    return () => {
-      if (ref.current) cancelAnimationFrame(ref.current);
-    };
-  }, [target, duration]);
-
-  return value;
+    raf.current = requestAnimationFrame(tick);
+    return () => { if (raf.current) cancelAnimationFrame(raf.current); };
+  }, [target, dur]);
+  return v;
 }
 
-/* Stat card component */
-function StatCard({
-  label,
-  value,
-  suffix = "",
-  color,
-  icon,
-}: {
-  label: string;
-  value: number | string;
-  suffix?: string;
-  color: string;
-  icon: string;
-}) {
-  return (
-    <div className="gh-cal__stat-card">
-      <span className="gh-cal__stat-icon">{icon}</span>
-      <span className="gh-cal__stat-value" style={{ color }}>
-        {value}
-        {suffix}
-      </span>
-      <span className="gh-cal__stat-label">{label}</span>
-    </div>
-  );
-}
-
+/* ── Main ── */
 export default function GithubCalendar() {
   const [data, setData] = useState<Contributions | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isVisible, setIsVisible] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
-  const animatedTotal = useAnimatedCounter(data?.total ?? 0, 1400);
-  const animatedStreak = useAnimatedCounter(data?.stats?.currentStreak ?? 0, 800);
-  const animatedLongest = useAnimatedCounter(data?.stats?.longestStreak ?? 0, 800);
-  const animatedBest = useAnimatedCounter(data?.stats?.bestDay?.count ?? 0, 800);
+  const tot = useCounter(data?.total ?? 0, 1400);
+  const streak = useCounter(data?.stats?.currentStreak ?? 0, 800);
+  const longest = useCounter(data?.stats?.longestStreak ?? 0, 800);
+  const best = useCounter(data?.stats?.bestDay?.count ?? 0, 800);
 
-  /* Intersection observer for reveal animation */
+  /* Scroll reveal */
   useEffect(() => {
-    const el = panelRef.current;
+    const el = wrapRef.current;
     if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.15 }
+    const io = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); io.disconnect(); } },
+      { threshold: 0.1 }
     );
-    observer.observe(el);
-    return () => observer.disconnect();
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
   const load = useCallback(async () => {
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/github/contributions");
-      if (!res.ok) throw new Error(`Failed to load contributions (${res.status})`);
-      const json = await res.json();
-      setData(json);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load GitHub activity");
+      const r = await fetch("/api/github/contributions");
+      if (!r.ok) throw new Error(`${r.status}`);
+      setData(await r.json());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const renderCalendar = () => {
-    if (!data) return null;
-    const { days, username, stats } = data;
-    if (days.length === 0) {
-      return <p className="gh-cal__empty">No contribution data available yet.</p>;
+  /* ── Build grid ── */
+  const buildGrid = () => {
+    if (!data || data.days.length === 0) return null;
+    const { days } = data;
+
+    // Determine first day of week for first date
+    const first = new Date(`${days[0].date}T00:00:00`);
+    const startOffset = first.getDay(); // 0=Sun
+
+    // Build weeks array (each week = 7 slots, null = empty)
+    const weeks: (ContributionDay | null)[][] = [];
+    let wk: (ContributionDay | null)[] = [];
+    for (let i = 0; i < startOffset; i++) wk.push(null);
+    for (const day of days) {
+      wk.push(day);
+      if (wk.length === 7) { weeks.push(wk); wk = []; }
+    }
+    if (wk.length) { while (wk.length < 7) wk.push(null); weeks.push(wk); }
+
+    // Month labels: only show when month changes
+    let prevMonth = -1;
+    const monthLabels = weeks.map((w) => {
+      const firstDay = w.find(Boolean);
+      if (!firstDay) return "";
+      const m = Number(firstDay.date.slice(5, 7)) - 1;
+      if (m === prevMonth) return "";
+      prevMonth = m;
+      return MONTHS[m];
+    });
+
+    // Track which columns have content for month label placement
+    const colCount = weeks.length;
+
+    return { weeks, monthLabels, colCount };
+  };
+
+  const grid = buildGrid();
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="ghc" aria-busy="true">
+          <div className="ghc__skeleton">
+            <div className="ghc__sk-bar" />
+            <div className="ghc__sk-bar ghc__sk-bar--sm" />
+            <div className="ghc__sk-dots">
+              {Array.from({ length: 49 }).map((_, i) => (
+                <span key={i} className="ghc__sk-cell" />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
     }
 
-    const firstDate = new Date(`${days[0].date}T00:00:00`);
-    const startOffset = firstDate.getDay();
+    if (error) {
+      return (
+        <div className="ghc ghc--error" role="alert">
+          <p>Could not load contribution data.</p>
+          <button type="button" onClick={load}>Retry</button>
+        </div>
+      );
+    }
 
-    const weeks: (ContributionDay | null)[][] = [];
-    let week: (ContributionDay | null)[] = [];
-    for (let i = 0; i < startOffset; i++) week.push(null);
-    days.forEach((day) => {
-      week.push(day);
-      if (week.length === 7) { weeks.push(week); week = []; }
-    });
-    if (week.length) { while (week.length < 7) week.push(null); weeks.push(week); }
+    if (!grid || !data) return null;
 
-    let lastMonth = -1;
-    const monthLabels: string[] = [];
-    weeks.forEach((w) => {
-      const first = w.find((d) => d);
-      if (!first) { monthLabels.push(""); return; }
-      const month = Number(first.date.slice(5, 7));
-      if (month === lastMonth) { monthLabels.push(""); } else { lastMonth = month; monthLabels.push(MONTHS[month - 1]); }
-    });
-
-    const columnCount = weeks.length;
-    const totalCells = columnCount * 7;
+    const { weeks, monthLabels, colCount } = grid;
+    const { username, stats } = data;
 
     return (
-      <div className={`gh-cal ${isVisible ? "gh-cal--visible" : ""}`}>
-        <div className="gh-cal__terminal">
-          {/* Title bar */}
-          <div className="gh-cal__titlebar">
-            <span className="gh-cal__dot gh-cal__dot--red" />
-            <span className="gh-cal__dot gh-cal__dot--yellow" />
-            <span className="gh-cal__dot gh-cal__dot--green" />
-            <span className="gh-cal__titlebar-text">
-              <span className="gh-cal__typed-prefix">{username}@github</span>:~$ contributions --graph
-            </span>
+      <div className={`ghc ${visible ? "ghc--in" : ""}`} ref={wrapRef}>
+        {/* Card header */}
+        <div className="ghc__head">
+          <div className="ghc__head-left">
+            <svg className="ghc__icon" viewBox="0 0 16 16" width="20" height="20" fill="currentColor">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+            </svg>
+            <span className="ghc__user">{username}</span>
           </div>
+          <a
+            className="ghc__link"
+            href={`https://github.com/${username}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View profile
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M3.75 2h3.5a.75.75 0 010 1.5H4.5v8h8V8.75a.75.75 0 011.5 0v3.5A1.75 1.75 0 0112.25 14h-8.5A1.75 1.75 0 012 12.25v-8.5C2 2.784 2.784 2 3.75 2zm6.72.72l3 3a.75.75 0 010 1.06l-3 3a.75.75 0 11-1.06-1.06l1.72-1.72H7a.75.75 0 010-1.5h4.13L9.41 3.78a.75.75 0 011.06-1.06z" />
+            </svg>
+          </a>
+        </div>
 
-          {/* Graph */}
-          <div className="gh-cal__graph">
+        {/* Heatmap grid */}
+        <div className="ghc__body">
+          <div className="ghc__scroll">
+            {/* Month row */}
             <div
-              className="gh-cal__months"
-              style={{ gridTemplateColumns: `40px repeat(${columnCount}, 13px)`, gap: "0 3px" }}
+              className="ghc__months"
+              style={{ gridTemplateColumns: `36px repeat(${colCount}, 13px)`, gap: "0 3px" }}
             >
-              <span aria-hidden="true" />
-              {monthLabels.map((label, i) => (
-                <span key={`m-${i}`} className="gh-cal__month-label">{label}</span>
+              <span />
+              {monthLabels.map((m, i) => (
+                <span key={i} className="ghc__month">{m}</span>
               ))}
             </div>
 
+            {/* Grid */}
             <div
-              className="gh-cal__grid"
-              style={{ gridTemplateColumns: `40px repeat(${columnCount}, 13px)`, gridTemplateRows: `repeat(7, 13px)`, gap: "3px" }}
+              className="ghc__grid"
+              style={{
+                gridTemplateColumns: `36px repeat(${colCount}, 13px)`,
+                gridTemplateRows: "repeat(7, 13px)",
+                gap: "3px",
+              }}
             >
-              {WEEKDAY_LABELS.map((label, i) => (
-                <span key={`d-${i}`} className="gh-cal__day-label" style={{ gridColumn: 1, gridRow: i + 1 }}>{label}</span>
+              {/* Weekday labels */}
+              {["", "Mon", "", "Wed", "", "Fri", ""].map((d, i) => (
+                <span key={i} className="ghc__wk" style={{ gridColumn: 1, gridRow: i + 1 }}>
+                  {d}
+                </span>
               ))}
+
+              {/* Cells */}
               {weeks.map((col, wi) =>
                 col.map((cell, di) => {
-                  const cellIndex = wi * 7 + di;
-                  const delay = Math.min(cellIndex * 2, 600);
+                  const idx = wi * 7 + di;
                   return (
                     <span
                       key={`${wi}-${di}`}
-                      className={`gh-cal__cell gh-cal__cell--${cell?.level ?? 0} ${isVisible ? "gh-cal__cell--in" : ""}`}
-                      style={{ gridColumn: wi + 2, gridRow: di + 1, transitionDelay: `${delay}ms` }}
-                      data-level={cell?.level ?? 0}
-                      data-date={cell?.date}
-                      title={cell ? `${cell.count} contribution${cell.count === 1 ? "" : "s"} on ${formatDateNice(cell.date)}` : undefined}
+                      className={`ghc__c ghc__c--${cell?.level ?? 0}${visible ? " ghc__c--in" : ""}`}
+                      style={{
+                        gridColumn: wi + 2,
+                        gridRow: di + 1,
+                        transitionDelay: `${Math.min(idx * 1.5, 800)}ms`,
+                      }}
+                      title={
+                        cell
+                          ? `${cell.count} contribution${cell.count !== 1 ? "s" : ""} on ${fmtNice(cell.date)}`
+                          : undefined
+                      }
                     />
                   );
                 })
               )}
             </div>
 
-            <div className="gh-cal__legend">
-              <span className="gh-cal__legend-label">Less</span>
-              {[0, 1, 2, 3, 4].map((level) => (
-                <span key={level} className={`gh-cal__cell gh-cal__cell--${level}`} />
+            {/* Legend */}
+            <div className="ghc__legend">
+              <span>Less</span>
+              {[0, 1, 2, 3, 4].map((l) => (
+                <span key={l} className={`ghc__c ghc__c--${l} ghc__c--leg`} />
               ))}
-              <span className="gh-cal__legend-label">More</span>
-            </div>
-          </div>
-
-          {/* Stats row */}
-          <div className="gh-cal__stats">
-            <div className="gh-cal__stats-row">
-              <StatCard icon="🟩" label="Contributions" value={animatedTotal.toLocaleString()} color="#39d353" />
-              <StatCard icon="🔥" label="Current Streak" value={animatedStreak} suffix="d" color="#58a6ff" />
-              <StatCard icon="⚡" label="Longest Streak" value={animatedLongest} suffix="d" color="#a371f7" />
-              <StatCard icon="🏆" label="Best Day" value={animatedBest} color="#f0883e" />
-            </div>
-
-            <div className="gh-cal__stats-meta">
-              {stats.dateRange && (
-                <span className="gh-cal__daterange">
-                  {formatDateShort(stats.dateRange.from)} → {formatDateShort(stats.dateRange.to)}
-                </span>
-              )}
+              <span>More</span>
             </div>
           </div>
         </div>
 
-        <a className="gh-cal__link" href={`https://github.com/${username}`} target="_blank" rel="noopener noreferrer">
-          View on GitHub <span className="gh-cal__link-arrow">↗</span>
-        </a>
+        {/* Footer stats */}
+        <div className="ghc__foot">
+          <div className="ghc__foot-main">
+            <span className="ghc__foot-total">{tot.toLocaleString()}</span> contributions in the last year
+          </div>
+          <div className="ghc__foot-meta">
+            {stats.dateRange && (
+              <span className="ghc__foot-range">
+                {fmtShort(stats.dateRange.from)} → {fmtShort(stats.dateRange.to)}
+              </span>
+            )}
+            <span className="ghc__foot-sep">·</span>
+            <span>
+              current streak <strong className="ghc__foot-blue">{streak} day{streak !== 1 ? "s" : ""}</strong>
+            </span>
+            <span className="ghc__foot-sep">·</span>
+            <span>
+              longest <strong className="ghc__foot-blue">{longest} day{longest !== 1 ? "s" : ""}</strong>
+            </span>
+            {stats.bestDay && (
+              <>
+                <span className="ghc__foot-sep">·</span>
+                <span>
+                  best day <strong className="ghc__foot-orange">{best}</strong>
+                </span>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
 
-  return (
-    <div className="gh-cal-panel" ref={panelRef}>
-      {isLoading && (
-        <div className="gh-cal__skeleton" aria-busy="true">
-          <div className="gh-cal__skeleton-bar" />
-          <div className="gh-cal__skeleton-bar gh-cal__skeleton-bar--short" />
-          <div className="gh-cal__skeleton-grid">
-            {Array.from({ length: 35 }).map((_, i) => (
-              <span key={i} className="gh-cal__skeleton-cell" />
-            ))}
-          </div>
-        </div>
-      )}
-      {error && (
-        <div className="gh-cal__error" role="alert">
-          <p>{error}</p>
-          <button type="button" onClick={load}>Retry</button>
-        </div>
-      )}
-      {!isLoading && !error && renderCalendar()}
-    </div>
-  );
+  return <div className="ghc-wrap">{renderContent()}</div>;
 }
