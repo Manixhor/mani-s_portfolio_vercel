@@ -5,40 +5,36 @@ import { useCallback, useEffect, useState } from "react";
 interface ContributionDay {
   date: string;
   level: number;
+  count: number;
 }
 
 interface Contributions {
   username: string;
   total: number;
   days: ContributionDay[];
+  stats: {
+    dateRange: { from: string; to: string } | null;
+    currentStreak: number;
+    longestStreak: number;
+    bestDay: { count: number; date: string } | null;
+  };
 }
 
 const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
 const WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
+function formatDateShort(dateStr: string) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
-function formatDate(date: string) {
-  const parsed = new Date(`${date}T00:00:00`);
-  return dateFormatter.format(parsed);
+function formatDateNice(dateStr: string) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
 export default function GithubCalendar() {
@@ -72,7 +68,7 @@ export default function GithubCalendar() {
   const renderCalendar = () => {
     if (!data) return null;
 
-    const { days, total, username } = data;
+    const { days, total, username, stats } = data;
 
     if (days.length === 0) {
       return (
@@ -100,7 +96,6 @@ export default function GithubCalendar() {
       weeks.push(week);
     }
 
-    // Build month labels aligned to the first week that starts each month
     let lastMonth = -1;
     const monthLabels: string[] = [];
     weeks.forEach((w) => {
@@ -122,81 +117,117 @@ export default function GithubCalendar() {
 
     return (
       <div className="gh-cal">
-        <div className="gh-cal__graph">
-          {/* Month labels row */}
-          <div
-            className="gh-cal__months"
-            style={{
-              gridTemplateColumns: `32px repeat(${columnCount}, 11px)`,
-              gap: "0 3px",
-            }}
-          >
-            <span aria-hidden="true" />
-            {monthLabels.map((label, i) => (
-              <span key={`m-${i}`} className="gh-cal__month-label">
-                {label}
-              </span>
-            ))}
+        {/* Terminal window */}
+        <div className="gh-cal__terminal">
+          {/* Terminal top bar */}
+          <div className="gh-cal__titlebar">
+            <span className="gh-cal__dot gh-cal__dot--red" />
+            <span className="gh-cal__dot gh-cal__dot--yellow" />
+            <span className="gh-cal__dot gh-cal__dot--green" />
+            <span className="gh-cal__titlebar-text">
+              {username}@github:~$ contributions --graph
+            </span>
           </div>
 
-          {/* Grid with weekday labels + cells */}
-          <div
-            className="gh-cal__grid"
-            style={{
-              gridTemplateColumns: `32px repeat(${columnCount}, 11px)`,
-              gridTemplateRows: `repeat(7, 11px)`,
-              gap: "3px",
-            }}
-          >
-            {/* Weekday labels */}
-            {WEEKDAY_LABELS.map((label, i) => (
-              <span
-                key={`d-${i}`}
-                className="gh-cal__day-label"
-                style={{ gridColumn: 1, gridRow: i + 1 }}
-              >
-                {label}
-              </span>
-            ))}
+          {/* Graph content */}
+          <div className="gh-cal__graph">
+            {/* Month labels row */}
+            <div
+              className="gh-cal__months"
+              style={{
+                gridTemplateColumns: `40px repeat(${columnCount}, 13px)`,
+                gap: "0 3px",
+              }}
+            >
+              <span aria-hidden="true" />
+              {monthLabels.map((label, i) => (
+                <span key={`m-${i}`} className="gh-cal__month-label">
+                  {label}
+                </span>
+              ))}
+            </div>
 
-            {/* Contribution cells */}
-            {weeks.map((col, wi) =>
-              col.map((cell, di) => (
+            {/* Grid with weekday labels + cells */}
+            <div
+              className="gh-cal__grid"
+              style={{
+                gridTemplateColumns: `40px repeat(${columnCount}, 13px)`,
+                gridTemplateRows: `repeat(7, 13px)`,
+                gap: "3px",
+              }}
+            >
+              {WEEKDAY_LABELS.map((label, i) => (
                 <span
-                  key={`${wi}-${di}`}
-                  className={`gh-cal__cell gh-cal__cell--${cell?.level ?? 0}`}
-                  style={{
-                    gridColumn: wi + 2,
-                    gridRow: di + 1,
-                  }}
-                  data-level={cell?.level ?? 0}
-                  data-date={cell?.date}
-                  title={
-                    cell
-                      ? `${cell.level} contribution${cell.level === 1 ? "" : "s"} on ${formatDate(cell.date)}`
-                      : undefined
-                  }
-                />
-              ))
-            )}
-          </div>
-        </div>
+                  key={`d-${i}`}
+                  className="gh-cal__day-label"
+                  style={{ gridColumn: 1, gridRow: i + 1 }}
+                >
+                  {label}
+                </span>
+              ))}
 
-        {/* Footer: total + legend */}
-        <div className="gh-cal__footer">
-          <p className="gh-cal__total">
-            <strong>{total.toLocaleString()}</strong> contributions in the last
-            year
-          </p>
-          <div className="gh-cal__legend" aria-hidden="true">
-            <span className="gh-cal__legend-label">Less</span>
-            {[0, 1, 2, 3, 4].map((level) => (
-              <span
-                key={level}
-                className={`gh-cal__cell gh-cal__cell--${level}`}
-              />
-            ))}
-            <span className="gh-cal__legend-label">More</span>
+              {weeks.map((col, wi) =>
+                col.map((cell, di) => (
+                  <span
+                    key={`${wi}-${di}`}
+                    className={`gh-cal__cell gh-cal__cell--${cell?.level ?? 0}`}
+                    style={{
+                      gridColumn: wi + 2,
+                      gridRow: di + 1,
+                    }}
+                    data-level={cell?.level ?? 0}
+                    data-date={cell?.date}
+                    title={
+                      cell
+                        ? `${cell.count} contribution${cell.count === 1 ? "" : "s"} on ${formatDateNice(cell.date)}`
+                        : undefined
+                    }
+                  />
+                ))
+              )}
+            </div>
+
+            {/* Legend */}
+            <div className="gh-cal__legend">
+              <span className="gh-cal__legend-label">Less</span>
+              {[0, 1, 2, 3, 4].map((level) => (
+                <span
+                  key={level}
+                  className={`gh-cal__cell gh-cal__cell--${level}`}
+                />
+              ))}
+              <span className="gh-cal__legend-label">More</span>
+            </div>
+          </div>
+
+          {/* Stats footer */}
+          <div className="gh-cal__stats">
+            <div className="gh-cal__stats-left">
+              <p className="gh-cal__total">
+                <strong>{total.toLocaleString()}</strong> contributions in the
+                last year
+              </p>
+              {stats.currentStreak > 0 && (
+                <p className="gh-cal__streak">
+                  current streak <strong>{stats.currentStreak} days</strong>{" "}
+                  &middot; longest <strong>{stats.longestStreak} days</strong>
+                </p>
+              )}
+            </div>
+            <div className="gh-cal__stats-right">
+              {stats.dateRange && (
+                <p className="gh-cal__daterange">
+                  {formatDateShort(stats.dateRange.from)} &rarr;{" "}
+                  {formatDateShort(stats.dateRange.to)}
+                </p>
+              )}
+              {stats.bestDay && (
+                <p className="gh-cal__bestday">
+                  best day <strong>{stats.bestDay.count}</strong> on{" "}
+                  {formatDateShort(stats.bestDay.date)}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
