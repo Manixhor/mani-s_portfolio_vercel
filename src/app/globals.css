@@ -414,7 +414,7 @@ a {
   font-weight: 500;
 }
 
-/* GitHub Contribution Calendar — terminal dark theme */
+/* GitHub Contribution Calendar — dynamic dark theme */
 .gh-cal-panel {
   max-width: 1060px;
   margin: 0 auto;
@@ -426,22 +426,42 @@ a {
   flex-direction: column;
   gap: 16px;
   width: 100%;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Terminal window wrapper */
+.gh-cal--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Terminal window */
 .gh-cal__terminal {
   background: #0d1117;
   border: 1px solid #30363d;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(57, 211, 83, 0.0),
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    0 0 60px rgba(57, 211, 83, 0.03);
+  transition: box-shadow 0.5s ease;
 }
 
-/* Terminal title bar */
+.gh-cal--visible .gh-cal__terminal {
+  box-shadow:
+    0 0 0 1px rgba(57, 211, 83, 0.08),
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    0 0 80px rgba(57, 211, 83, 0.06);
+}
+
+/* Title bar */
 .gh-cal__titlebar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 14px 18px;
   background: #161b22;
   border-bottom: 1px solid #30363d;
 }
@@ -450,8 +470,10 @@ a {
   width: 12px;
   height: 12px;
   border-radius: 50%;
+  transition: transform 0.2s ease;
 }
 
+.gh-cal__dot:hover { transform: scale(1.2); }
 .gh-cal__dot--red { background: #ff5f57; }
 .gh-cal__dot--yellow { background: #febc2e; }
 .gh-cal__dot--green { background: #28c840; }
@@ -465,13 +487,24 @@ a {
   white-space: nowrap;
 }
 
-/* Graph content area */
+.gh-cal__typed-prefix {
+  color: #39d353;
+  font-weight: 600;
+}
+
+/* Graph area */
 .gh-cal__graph {
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   padding: 16px 20px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #30363d #0d1117;
 }
+
+.gh-cal__graph::-webkit-scrollbar { height: 6px; }
+.gh-cal__graph::-webkit-scrollbar-track { background: #0d1117; }
+.gh-cal__graph::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
 
 .gh-cal__months {
   display: grid;
@@ -490,9 +523,7 @@ a {
   align-items: flex-end;
 }
 
-.gh-cal__grid {
-  display: grid;
-}
+.gh-cal__grid { display: grid; }
 
 .gh-cal__day-label {
   font-size: 0.7rem;
@@ -506,7 +537,7 @@ a {
   padding-right: 6px;
 }
 
-/* Contribution cells — dark theme green */
+/* Cells — staggered fade-in */
 .gh-cal__cell {
   display: block;
   width: 13px;
@@ -514,11 +545,21 @@ a {
   border-radius: 2px;
   background: #161b22;
   border: 1px solid #1b2029;
-  transition: border-color 0.1s ease;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.3s ease, transform 0.3s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gh-cal__cell--in {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .gh-cal__cell:hover {
   border-color: #8b949e;
+  box-shadow: 0 0 8px rgba(57, 211, 83, 0.3);
+  z-index: 2;
+  position: relative;
 }
 
 .gh-cal__cell--0 { background: #161b22; border-color: #1b2029; }
@@ -538,6 +579,8 @@ a {
 
 .gh-cal__legend .gh-cal__cell {
   cursor: default;
+  opacity: 1;
+  transform: scale(1);
 }
 
 .gh-cal__legend-label {
@@ -547,74 +590,73 @@ a {
   font-family: "SFMono-Regular", Consolas, monospace;
 }
 
-/* Stats footer inside terminal */
+/* Stats section */
 .gh-cal__stats {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 12px 20px 18px;
+  padding: 16px 20px 20px;
   border-top: 1px solid #21262d;
 }
 
-.gh-cal__stats-left,
-.gh-cal__stats-right {
+.gh-cal__stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.gh-cal__stat-card {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 4px;
+  padding: 12px 8px;
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
-.gh-cal__stats-right {
-  text-align: right;
+.gh-cal__stat-card:hover {
+  border-color: #30363d;
+  transform: translateY(-2px);
 }
 
-.gh-cal__total {
-  margin: 0;
-  color: #8b949e;
-  font-size: 0.85rem;
+.gh-cal__stat-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.gh-cal__stat-value {
   font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.gh-cal__total strong {
-  color: #39d353;
-}
-
-.gh-cal__streak {
-  margin: 0;
+.gh-cal__stat-label {
   color: #8b949e;
-  font-size: 0.82rem;
+  font-size: 0.68rem;
   font-family: "SFMono-Regular", Consolas, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.gh-cal__streak strong {
-  color: #58a6ff;
+.gh-cal__stats-meta {
+  display: flex;
+  justify-content: center;
 }
 
 .gh-cal__daterange {
-  margin: 0;
-  color: #8b949e;
-  font-size: 0.82rem;
+  color: #484f58;
+  font-size: 0.78rem;
   font-family: "SFMono-Regular", Consolas, monospace;
 }
 
-.gh-cal__bestday {
-  margin: 0;
-  color: #8b949e;
-  font-size: 0.82rem;
-  font-family: "SFMono-Regular", Consolas, monospace;
-}
-
-.gh-cal__bestday strong {
-  color: #f0883e;
-}
-
-/* View on GitHub link */
+/* View on GitHub */
 .gh-cal__link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 24px;
+  padding: 12px 28px;
   border: 1px solid #30363d;
   border-radius: 999px;
   background: #0d1117;
@@ -622,35 +664,73 @@ a {
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
-}
-
-.gh-cal__link::after {
-  content: "\2192";
-  font-size: 1rem;
-  line-height: 1;
+  letter-spacing: 0.04em;
+  transition: all 0.25s ease;
 }
 
 .gh-cal__link:hover {
-  border-color: #58a6ff;
+  border-color: #39d353;
   background: #161b22;
+  color: #39d353;
   transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(57, 211, 83, 0.15);
 }
 
+.gh-cal__link-arrow {
+  transition: transform 0.2s ease;
+}
+
+.gh-cal__link:hover .gh-cal__link-arrow {
+  transform: translate(2px, -2px);
+}
+
+/* Empty state */
 .gh-cal__empty {
   color: #8b949e;
   padding: 42px 0;
 }
 
+/* Skeleton loading */
 .gh-cal__skeleton {
-  padding: 42px;
-  color: #8b949e;
-  font-size: 0.9rem;
+  padding: 24px;
   background: #0d1117;
-  border-radius: 10px;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  animation: ghPulse 1.5s ease-in-out infinite;
 }
 
+.gh-cal__skeleton-bar {
+  height: 14px;
+  width: 60%;
+  background: #161b22;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.gh-cal__skeleton-bar--short {
+  width: 35%;
+}
+
+.gh-cal__skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(20, 13px);
+  gap: 3px;
+  margin-top: 16px;
+}
+
+.gh-cal__skeleton-cell {
+  width: 13px;
+  height: 13px;
+  background: #161b22;
+  border-radius: 2px;
+}
+
+@keyframes ghPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Error state */
 .gh-cal__error {
   display: grid;
   justify-items: center;
@@ -658,14 +738,11 @@ a {
   padding: 42px;
   text-align: center;
   background: #0d1117;
-  border-radius: 10px;
+  border: 1px solid #30363d;
+  border-radius: 12px;
 }
 
-.gh-cal__error p {
-  margin: 0;
-  color: #8b949e;
-  font-size: 0.9rem;
-}
+.gh-cal__error p { margin: 0; color: #8b949e; font-size: 0.9rem; }
 
 .gh-cal__error button {
   padding: 10px 22px;
@@ -681,9 +758,26 @@ a {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.gh-cal__error button:hover {
-  background: #21262d;
-  color: #c9d1d9;
+.gh-cal__error button:hover { background: #21262d; color: #c9d1d9; }
+
+/* Responsive */
+@media (max-width: 700px) {
+  .gh-cal__stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .gh-cal__stats-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .gh-cal__stat-value {
+    font-size: 1.1rem;
+  }
+  .gh-cal__titlebar-text {
+    font-size: 0.7rem;
+  }
 }
 
 /* Certification Grid */
