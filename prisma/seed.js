@@ -13,7 +13,7 @@ async function main() {
         title: "I build what people use",
         name: "Mani",
         tagline: "Software Developer | Full Stack Developer",
-        year: "2024 - Present",
+        year: "2026 - Present",
         resumeLabel: "Download Resume",
         resumeUrl: "https://drive.google.com/file/d/1ot8sEzU71vKmRVdMo-XamOrXVWgmhZv5/view?usp=sharing",
         social: {
