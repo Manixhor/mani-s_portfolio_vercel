@@ -373,10 +373,6 @@ export default function Home() {
 
         {/* GitHub Contributions Section */}
         <section id="contributions" className="github-panel section-panel">
-          <div className="section-heading">
-            <p className="section-kicker">GitHub Activity</p>
-            <h2>Contributions</h2>
-          </div>
           <GithubCalendar />
         </section>
 
