@@ -11,7 +11,7 @@ async function main() {
       id: 1,
       hero: JSON.stringify({
         title: "I build what people use",
-        name: "Manikanta",
+        name: "Mani",
         tagline: "Software Developer | Full Stack Developer",
         year: "2024 - Present",
         resumeLabel: "Download Resume",

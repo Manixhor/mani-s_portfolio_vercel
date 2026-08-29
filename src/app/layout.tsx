@@ -3,13 +3,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Mani | Portfolio",
-  description: "Portfolio of Manikanta Gururam, Python and Django developer.",
+    description: "Portfolio of Mani, Python and Django developer.",
   icons: {
     icon: "/static/icons/icon.svg",
   },
   openGraph: {
     title: "Mani | Portfolio",
-    description: "Portfolio of Manikanta Gururam, Python and Django developer.",
+  description: "Portfolio of Mani, Python and Django developer.",
     type: "website",
     images: [
       "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
