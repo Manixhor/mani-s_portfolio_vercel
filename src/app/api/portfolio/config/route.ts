@@ -72,7 +72,7 @@ export async function GET() {
 
     // Transform certification items
     const certifications = {
-      sectionLabel: 'Certifications',
+      sectionLabel: '',
       heading: 'Certifications',
       items: certificationItems.map((item) => ({
         title: item.title,
