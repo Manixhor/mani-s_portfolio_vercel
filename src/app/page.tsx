@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import GithubCalendar from "@/components/GithubCalendar";
 
 interface PortfolioConfig {
   hero: {
@@ -142,7 +143,7 @@ export default function Home() {
     if (motionQuery.matches) return;
 
     const revealItems = document.querySelectorAll(
-      ".split-panel, .experience-card, .skills-grid, .certification-card, .project-card, .contact-panel"
+      ".split-panel, .experience-card, .skills-grid, .certification-card, .project-card, .contact-panel, .github-calendar-panel"
     );
 
     revealItems.forEach((item) => item.classList.add("reveal-on-scroll"));
@@ -276,7 +277,7 @@ export default function Home() {
             <span />
           </button>
           <div className="nav-links" id="primary-nav">
-            {["Home", "About", "Experience", "Projects", "Certifications", "Skills", "Contact"].map(
+            {["Home", "About", "Experience", "Skills", "Contributions", "Projects", "Certifications", "Contact"].map(
               (item) => (
                 <a
                   key={item}
@@ -322,7 +323,9 @@ export default function Home() {
         {/* Experience Section */}
         <section id="experience" className="experience-panel section-panel">
           <div className="section-heading">
-            <p className="section-kicker">{experience.sectionLabel}</p>
+            {experience.sectionLabel && (
+              <p className="section-kicker">{experience.sectionLabel}</p>
+            )}
             <h2>{experience.heading}</h2>
           </div>
           {(experience.items || []).map((item, i) => (
@@ -344,7 +347,9 @@ export default function Home() {
         {/* Skills Section */}
         <section id="skills" className="skills-panel section-panel">
           <div className="section-heading">
-            <p className="section-kicker">{skills.sectionLabel}</p>
+            {skills.sectionLabel && (
+              <p className="section-kicker">{skills.sectionLabel}</p>
+            )}
             <h2>{skills.heading}</h2>
           </div>
           <div className="skills-grid" aria-label="Technical skills">
@@ -366,10 +371,21 @@ export default function Home() {
           </div>
         </section>
 
+        {/* GitHub Contributions Section */}
+        <section id="contributions" className="github-panel section-panel">
+          <div className="section-heading">
+            <p className="section-kicker">GitHub Activity</p>
+            <h2>Contributions</h2>
+          </div>
+          <GithubCalendar />
+        </section>
+
         {/* Projects Section */}
         <section id="projects" className="projects-panel section-panel">
           <div className="section-heading">
-            <p className="section-kicker">{projects.sectionLabel}</p>
+            {projects.sectionLabel && (
+              <p className="section-kicker">{projects.sectionLabel}</p>
+            )}
             <h2>{projects.heading}</h2>
           </div>
           <div className="project-grid">
