@@ -143,7 +143,7 @@ export default function Home() {
     if (motionQuery.matches) return;
 
     const revealItems = document.querySelectorAll(
-      ".split-panel, .experience-card, .skills-grid, .certification-card, .project-card, .contact-panel, .github-calendar-panel"
+      ".split-panel, .experience-card, .skills-grid, .certification-card, .project-card, .contact-panel, .gh-cal-panel"
     );
 
     revealItems.forEach((item) => item.classList.add("reveal-on-scroll"));

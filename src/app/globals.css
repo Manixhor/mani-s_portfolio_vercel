@@ -414,101 +414,90 @@ a {
   font-weight: 500;
 }
 
-/* GitHub Contribution Calendar */
-.github-calendar-panel {
-  display: grid;
-  justify-items: center;
+/* GitHub Contribution Calendar — exact GitHub match */
+.gh-cal-panel {
   max-width: 1060px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 0;
   border: 0;
   border-radius: var(--radius-lg);
-  overflow: hidden;
 }
 
-.github-calendar {
-  --gh-cell: clamp(9px, 1.3vw, 13px);
-  --gh-gap: 3px;
-  display: grid;
-  justify-items: center;
-  gap: 20px;
+.gh-cal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   width: 100%;
-  max-width: 100%;
 }
 
-.github-calendar__grid {
-  display: grid;
-  grid-auto-flow: row;
-  grid-template-rows: auto repeat(7, var(--gh-cell));
-  gap: var(--gh-gap);
+/* Graph wrapper — scrollable on small screens */
+.gh-cal__graph {
+  width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 14px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--white);
 }
 
-.github-calendar__corner {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.github-calendar__month {
-  grid-row: 1;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.github-calendar__days {
+.gh-cal__months {
   display: grid;
-  grid-template-rows: repeat(7, var(--gh-cell));
-  gap: var(--gh-gap);
-  justify-items: end;
+  align-items: end;
+  margin-bottom: 2px;
 }
 
-.github-calendar__days span {
-  color: var(--muted);
+.gh-cal__month-label {
   font-size: 0.68rem;
-  font-weight: 600;
-  line-height: var(--gh-cell);
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1;
+  height: 14px;
+  display: flex;
+  align-items: flex-end;
 }
 
-.github-calendar__cell {
+.gh-cal__grid {
+  display: grid;
+}
+
+/* Weekday labels (left column) */
+.gh-cal__day-label {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+}
+
+/* Contribution cells — exact GitHub sizes and colors */
+.gh-cal__cell {
   display: block;
-  width: var(--gh-cell);
-  height: var(--gh-cell);
+  width: 11px;
+  height: 11px;
   border-radius: 2px;
+  outline: 1px solid rgba(27, 31, 36, 0.06);
+  outline-offset: -1px;
   background: #ebedf0;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition: outline-color 0.1s ease;
 }
 
-.github-calendar__cell[data-level="1"] {
-  background: #9be9a8;
+.gh-cal__cell:hover {
+  outline-color: var(--ink);
+  outline-width: 1px;
 }
 
-.github-calendar__cell[data-level="2"] {
-  background: #40c463;
-}
+.gh-cal__cell--0 { background: #ebedf0; }
+.gh-cal__cell--1 { background: #9be9a8; }
+.gh-cal__cell--2 { background: #40c463; }
+.gh-cal__cell--3 { background: #30a14e; }
+.gh-cal__cell--4 { background: #216e39; }
 
-.github-calendar__cell[data-level="3"] {
-  background: #30a14e;
-}
-
-.github-calendar__cell[data-level="4"] {
-  background: #216e39;
-}
-
-.github-calendar__cell:not([style*="opacity: 0"]):hover {
-  transform: scale(1.25);
-  filter: brightness(0.92);
-}
-
-.github-calendar__footer {
+/* Footer: total + legend */
+.gh-cal__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -517,35 +506,35 @@ a {
   width: 100%;
 }
 
-.github-calendar__total {
+.gh-cal__total {
   margin: 0;
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: 0.82rem;
 }
 
-.github-calendar__total strong {
+.gh-cal__total strong {
   color: var(--ink);
 }
 
-.github-calendar__legend {
+.gh-cal__legend {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
-.github-calendar__legend .github-calendar__cell {
+.gh-cal__legend .gh-cal__cell {
   cursor: default;
 }
 
-.github-calendar__legend-label {
+.gh-cal__legend-label {
   margin: 0 4px;
   color: var(--muted);
   font-size: 0.68rem;
-  font-weight: 600;
-  text-transform: uppercase;
+  font-weight: 400;
 }
 
-.github-calendar__link {
+/* View on GitHub link */
+.gh-cal__link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -558,29 +547,30 @@ a {
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
 
-.github-calendar__link::after {
+.gh-cal__link::after {
   content: "→";
   font-size: 1rem;
   line-height: 1;
 }
 
-.github-calendar__link:hover {
+.gh-cal__link:hover {
   border-color: var(--ink);
   background: var(--soft);
   transform: translateY(-2px);
 }
 
-.github-calendar__empty {
+.gh-cal__empty {
   color: var(--muted);
+  padding: 42px 0;
 }
 
-.github-calendar__skeleton {
+.gh-cal__skeleton {
   padding: 42px;
   color: var(--muted);
   font-size: 0.9rem;
 }
 
-.github-calendar__error {
+.gh-cal__error {
   display: grid;
   justify-items: center;
   gap: 12px;
@@ -588,13 +578,13 @@ a {
   text-align: center;
 }
 
-.github-calendar__error p {
+.gh-cal__error p {
   margin: 0;
   color: var(--muted);
   font-size: 0.9rem;
 }
 
-.github-calendar__error button {
+.gh-cal__error button {
   padding: 10px 22px;
   border: 1.5px solid var(--ink);
   border-radius: 999px;
@@ -608,7 +598,7 @@ a {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.github-calendar__error button:hover {
+.gh-cal__error button:hover {
   background: var(--ink);
   color: var(--white);
 }

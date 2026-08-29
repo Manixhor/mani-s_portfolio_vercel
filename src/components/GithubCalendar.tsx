@@ -33,6 +33,7 @@ const WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
+  year: "numeric",
 });
 
 function formatDate(date: string) {
@@ -75,7 +76,7 @@ export default function GithubCalendar() {
 
     if (days.length === 0) {
       return (
-        <p className="github-calendar__empty">
+        <p className="gh-cal__empty">
           No contribution data available yet.
         </p>
       );
@@ -99,91 +100,108 @@ export default function GithubCalendar() {
       weeks.push(week);
     }
 
+    // Build month labels aligned to the first week that starts each month
     let lastMonth = -1;
-    const monthLabels = weeks.map((w) => {
+    const monthLabels: string[] = [];
+    weeks.forEach((w) => {
       const first = w.find((d) => d);
-      if (!first) return "";
+      if (!first) {
+        monthLabels.push("");
+        return;
+      }
       const month = Number(first.date.slice(5, 7));
-      if (month === lastMonth) return "";
-      lastMonth = month;
-      return MONTHS[month - 1];
+      if (month === lastMonth) {
+        monthLabels.push("");
+      } else {
+        lastMonth = month;
+        monthLabels.push(MONTHS[month - 1]);
+      }
     });
 
     const columnCount = weeks.length;
 
     return (
-      <div className="github-calendar">
-        <div
-          className="github-calendar__grid"
-          style={{
-            gridTemplateColumns: `36px repeat(${columnCount}, var(--gh-cell))`,
-          }}
-        >
-          {/* Month labels */}
-          <span className="github-calendar__corner" aria-hidden="true" />
-          {monthLabels.map((label, i) => (
-            <span
-              key={`month-${i}`}
-              className="github-calendar__month"
-              style={{ gridColumn: i + 2 }}
-            >
-              {label}
-            </span>
-          ))}
-
-          {/* Weekday labels */}
+      <div className="gh-cal">
+        <div className="gh-cal__graph">
+          {/* Month labels row */}
           <div
-            className="github-calendar__days"
-            style={{ gridColumn: 1 }}
-            aria-hidden="true"
+            className="gh-cal__months"
+            style={{
+              gridTemplateColumns: `32px repeat(${columnCount}, 11px)`,
+              gap: "0 3px",
+            }}
           >
-            {WEEKDAY_LABELS.map((label, i) => (
-              <span key={i}>{label}</span>
+            <span aria-hidden="true" />
+            {monthLabels.map((label, i) => (
+              <span key={`m-${i}`} className="gh-cal__month-label">
+                {label}
+              </span>
             ))}
           </div>
 
-          {/* Heatmap cells */}
-          {weeks.map((col, wi) =>
-            col.map((cell, di) => (
+          {/* Grid with weekday labels + cells */}
+          <div
+            className="gh-cal__grid"
+            style={{
+              gridTemplateColumns: `32px repeat(${columnCount}, 11px)`,
+              gridTemplateRows: `repeat(7, 11px)`,
+              gap: "3px",
+            }}
+          >
+            {/* Weekday labels */}
+            {WEEKDAY_LABELS.map((label, i) => (
               <span
-                key={`${wi}-${di}`}
-                className="github-calendar__cell"
-                style={{
-                  gridColumn: wi + 2,
-                  gridRow: di + 2,
-                  opacity: cell ? 1 : 0,
-                }}
-                data-level={cell?.level ?? 0}
-                title={
-                  cell
-                    ? `${cell.level} contribution${cell.level === 1 ? "" : "s"} on ${formatDate(cell.date)}`
-                    : undefined
-                }
-              />
-            ))
-          )}
+                key={`d-${i}`}
+                className="gh-cal__day-label"
+                style={{ gridColumn: 1, gridRow: i + 1 }}
+              >
+                {label}
+              </span>
+            ))}
+
+            {/* Contribution cells */}
+            {weeks.map((col, wi) =>
+              col.map((cell, di) => (
+                <span
+                  key={`${wi}-${di}`}
+                  className={`gh-cal__cell gh-cal__cell--${cell?.level ?? 0}`}
+                  style={{
+                    gridColumn: wi + 2,
+                    gridRow: di + 1,
+                  }}
+                  data-level={cell?.level ?? 0}
+                  data-date={cell?.date}
+                  title={
+                    cell
+                      ? `${cell.level} contribution${cell.level === 1 ? "" : "s"} on ${formatDate(cell.date)}`
+                      : undefined
+                  }
+                />
+              ))
+            )}
+          </div>
         </div>
 
-        <div className="github-calendar__footer">
-          <p className="github-calendar__total">
+        {/* Footer: total + legend */}
+        <div className="gh-cal__footer">
+          <p className="gh-cal__total">
             <strong>{total.toLocaleString()}</strong> contributions in the last
             year
           </p>
-          <div className="github-calendar__legend" aria-hidden="true">
-            <span className="github-calendar__legend-label">Less</span>
+          <div className="gh-cal__legend" aria-hidden="true">
+            <span className="gh-cal__legend-label">Less</span>
             {[0, 1, 2, 3, 4].map((level) => (
               <span
                 key={level}
-                className="github-calendar__cell"
-                data-level={level}
+                className={`gh-cal__cell gh-cal__cell--${level}`}
               />
             ))}
-            <span className="github-calendar__legend-label">More</span>
+            <span className="gh-cal__legend-label">More</span>
           </div>
         </div>
 
         <a
-          className="github-calendar__link"
+          className="gh-cal__link"
           href={`https://github.com/${username}`}
           target="_blank"
           rel="noopener noreferrer"
@@ -195,14 +213,14 @@ export default function GithubCalendar() {
   };
 
   return (
-    <div className="github-calendar-panel">
+    <div className="gh-cal-panel">
       {isLoading && (
-        <div className="github-calendar__skeleton" aria-busy="true">
+        <div className="gh-cal__skeleton" aria-busy="true">
           Loading GitHub activity...
         </div>
       )}
       {error && (
-        <div className="github-calendar__error" role="alert">
+        <div className="gh-cal__error" role="alert">
           <p>{error}</p>
           <button type="button" onClick={load}>
             Retry
